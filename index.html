@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cellular Automata Research Sandbox</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #151b2b;
+            --bg-tertiary: #1e2636;
+            --accent-primary: #00d4ff;
+            --accent-secondary: #00ff88;
+            --text-primary: #e8edf4;
+            --text-secondary: #9ca3af;
+            --border: #2d3748;
+            --shadow: rgba(0, 212, 255, 0.15);
+        }
+
+        body {
+            font-family: 'IBM Plex Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .canvas-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .canvas-container {
+            width: 100%;
+            aspect-ratio: 1;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid var(--border);
+            position: relative;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            image-rendering: pixelated;
+        }
+
+        .controls-panel {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .control-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--accent-primary);
+        }
+
+        .button-row {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 0.65rem 1rem;
+            border-radius: 6px;
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+            min-width: fit-content;
+        }
+
+        button:hover {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+            border-color: var(--accent-primary);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.active {
+            background: var(--accent-secondary);
+            color: var(--bg-primary);
+            border-color: var(--accent-secondary);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-tertiary);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            cursor: pointer;
+            border: 2px solid var(--bg-primary);
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            cursor: pointer;
+            border: 2px solid var(--bg-primary);
+        }
+
+        .slider-value {
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-secondary);
+            font-size: 0.9rem;
+        }
+
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .color-swatch {
+            aspect-ratio: 1;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid var(--border);
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .color-swatch.selected {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--shadow);
+        }
+
+        .code-editor {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            width: 100%;
+            min-height: 250px;
+            resize: vertical;
+            line-height: 1.6;
+        }
+
+        .code-editor:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--shadow);
+        }
+
+        .info-panel {
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .info-panel code {
+            color: var(--accent-secondary);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        .stat-item {
+            background: var(--bg-tertiary);
+            padding: 0.5rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+
+        .stat-value {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 0.5rem 0;
+        }
+
+        @media (max-width: 1400px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls-panel {
+                max-height: none;
+            }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Cellular Automata Sandbox</h1>
+            <div class="subtitle">Mathematical Research Environment</div>
+        </header>
+
+        <div class="main-grid">
+            <div class="canvas-section">
+                <div class="canvas-container">
+                    <canvas id="grid"></canvas>
+                </div>
+            </div>
+
+            <div class="controls-panel">
+                <div class="control-group">
+                    <label>Simulation Controls</label>
+                    <div class="button-row">
+                        <button id="playBtn">Play</button>
+                        <button id="stepBtn">Step</button>
+                        <button id="stepBackBtn">Step Back</button>
+                    </div>
+                    <div class="button-row">
+                        <button id="clearBtn">Clear</button>
+                        <button id="randomBtn">Randomize</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Grid Size: <span class="slider-value" id="gridSizeValue">50</span></label>
+                    <input type="range" id="gridSize" min="10" max="200" value="50">
+                </div>
+
+                <div class="control-group">
+                    <label>Speed (ms): <span class="slider-value" id="speedValue">100</span></label>
+                    <input type="range" id="speed" min="10" max="1000" value="100" step="10">
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="control-group">
+                    <label>Color Palette</label>
+                    <div class="color-palette" id="colorPalette"></div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="control-group">
+                    <label>Custom Rules (JavaScript)</label>
+                    <textarea class="code-editor" id="rulesEditor" placeholder="Enter custom rules...">// Conway's Game of Life
+// Rules:
+// 1. Any live cell with 2-3 neighbors survives
+// 2. Any dead cell with exactly 3 neighbors becomes alive
+// 3. All other cells die or stay dead
+//
+// Available colors: red, green, cyan, orange, purple, 
+//                   yellow, teal, magenta, lime, blue, amber, violet
+
+function updateCell(x, y, color, counts) {
+    const alive = color !== null;
+    const neighbors = counts[3].total - (alive ? 1 : 0);
+    
+    if (alive) {
+        // Survival: 2 or 3 neighbors
+        if (neighbors === 2 || neighbors === 3) {
+            return color;
+        }
+        return null; // Dies
+    } else {
+        // Birth: exactly 3 neighbors
+        if (neighbors === 3) {
+            return 'green'; // New cell color
+        }
+        return null; // Stays dead
+    }
+}</textarea>
+                    <button id="applyRulesBtn">Apply Rules</button>
+                </div>
+
+                <div class="control-group">
+                    <label>Statistics</label>
+                    <div class="stats" id="stats"></div>
+                </div>
+
+                <div class="info-panel">
+                    <strong>Instructions:</strong><br>
+                    • Click colors to select, click grid to paint<br>
+                    • Use color names in rules (red, green, cyan, etc.)<br>
+                    • Neighborhoods: 3×3, 5×5, 7×7, 9×9, 11×11<br>
+                    • <code>counts[size].colorName</code> for color counts<br>
+                    • <code>counts[size].total</code> for all non-empty<br>
+                    • Return <code>null</code> for empty cells<br>
+                    • Step Back button reverses up to 100 steps
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CellularAutomata {
+            constructor() {
+                this.canvas = document.getElementById('grid');
+                this.ctx = this.canvas.getContext('2d');
+                this.gridSize = 50;
+                this.cellSize = 10;
+                this.grid = [];
+                this.running = false;
+                this.intervalId = null;
+                this.speed = 100;
+                
+                this.colors = {
+                    'red': '#ff3366',
+                    'green': '#00ff88',
+                    'cyan': '#00d4ff',
+                    'orange': '#ffaa00',
+                    'purple': '#aa00ff',
+                    'yellow': '#ffff00',
+                    'teal': '#00ffff',
+                    'magenta': '#ff00ff',
+                    'lime': '#88ff00',
+                    'blue': '#0088ff',
+                    'amber': '#ff8800',
+                    'violet': '#8800ff'
+                };
+                
+                this.defaultColors = Object.keys(this.colors);
+                
+                this.selectedColor = this.defaultColors[0];
+                this.customRule = null;
+                this.history = [];
+                this.maxHistory = 100;
+                
+                this.init();
+                this.setupEventListeners();
+                this.updateColorPalette();
+                this.resizeCanvas();
+                this.render();
+            }
+            
+            init() {
+                this.grid = Array(this.gridSize).fill(null).map(() => 
+                    Array(this.gridSize).fill(null)
+                );
+            }
+            
+            resizeCanvas() {
+                const containerWidth = this.canvas.parentElement.clientWidth;
+                const containerHeight = this.canvas.parentElement.clientHeight;
+                const size = Math.min(containerWidth, containerHeight);
+                
+                this.canvas.width = size;
+                this.canvas.height = size;
+                this.cellSize = size / this.gridSize;
+            }
+            
+            setupEventListeners() {
+                document.getElementById('playBtn').addEventListener('click', () => this.togglePlay());
+                document.getElementById('stepBtn').addEventListener('click', () => this.step());
+                document.getElementById('stepBackBtn').addEventListener('click', () => this.stepBack());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clear());
+                document.getElementById('randomBtn').addEventListener('click', () => this.randomize());
+                document.getElementById('applyRulesBtn').addEventListener('click', () => this.applyCustomRules());
+                
+                document.getElementById('gridSize').addEventListener('input', (e) => {
+                    this.gridSize = parseInt(e.target.value);
+                    document.getElementById('gridSizeValue').textContent = this.gridSize;
+                    this.init();
+                    this.resizeCanvas();
+                    this.render();
+                });
+                
+                document.getElementById('speed').addEventListener('input', (e) => {
+                    this.speed = parseInt(e.target.value);
+                    document.getElementById('speedValue').textContent = this.speed;
+                    if (this.running) {
+                        this.stop();
+                        this.play();
+                    }
+                });
+                
+                this.canvas.addEventListener('click', (e) => this.handleClick(e));
+                this.canvas.addEventListener('mousemove', (e) => {
+                    if (e.buttons === 1) this.handleClick(e);
+                });
+                
+                window.addEventListener('resize', () => {
+                    this.resizeCanvas();
+                    this.render();
+                });
+            }
+            
+            handleClick(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = Math.floor((e.clientX - rect.left) / this.cellSize);
+                const y = Math.floor((e.clientY - rect.top) / this.cellSize);
+                
+                if (x >= 0 && x < this.gridSize && y >= 0 && y < this.gridSize) {
+                    this.grid[y][x] = this.selectedColor;
+                    this.render();
+                }
+            }
+            
+            updateColorPalette() {
+                const palette = document.getElementById('colorPalette');
+                palette.innerHTML = '';
+                
+                // Add empty/eraser option
+                const eraserContainer = document.createElement('div');
+                eraserContainer.style.cssText = 'grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.5rem;';
+                
+                const eraser = document.createElement('div');
+                eraser.className = 'color-swatch';
+                eraser.style.background = 'repeating-linear-gradient(45deg, #1e2636, #1e2636 5px, #2d3748 5px, #2d3748 10px)';
+                eraser.addEventListener('click', () => {
+                    this.selectedColor = null;
+                    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+                    eraser.classList.add('selected');
+                });
+                
+                const eraserLabel = document.createElement('div');
+                eraserLabel.textContent = 'empty';
+                eraserLabel.style.cssText = 'text-align: center; font-size: 0.75rem; color: var(--text-secondary); font-family: "JetBrains Mono", monospace;';
+                
+                eraserContainer.appendChild(eraser);
+                eraserContainer.appendChild(eraserLabel);
+                palette.appendChild(eraserContainer);
+                
+                this.defaultColors.forEach(colorName => {
+                    const colorContainer = document.createElement('div');
+                    colorContainer.style.cssText = 'display: flex; flex-direction: column; gap: 0.25rem;';
+                    
+                    const swatch = document.createElement('div');
+                    swatch.className = 'color-swatch';
+                    swatch.style.backgroundColor = this.colors[colorName];
+                    swatch.addEventListener('click', () => {
+                        this.selectedColor = colorName;
+                        document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+                        swatch.classList.add('selected');
+                    });
+                    
+                    const label = document.createElement('div');
+                    label.textContent = colorName;
+                    label.style.cssText = 'text-align: center; font-size: 0.7rem; color: var(--text-secondary); font-family: "JetBrains Mono", monospace;';
+                    
+                    colorContainer.appendChild(swatch);
+                    colorContainer.appendChild(label);
+                    palette.appendChild(colorContainer);
+                });
+                
+                document.querySelectorAll('.color-swatch')[1].classList.add('selected');
+            }
+            
+            clear() {
+                this.init();
+                this.render();
+            }
+            
+            randomize() {
+                this.saveHistory();
+                for (let y = 0; y < this.gridSize; y++) {
+                    for (let x = 0; x < this.gridSize; x++) {
+                        if (Math.random() < 0.3) {
+                            this.grid[y][x] = this.defaultColors[Math.floor(Math.random() * this.defaultColors.length)];
+                        } else {
+                            this.grid[y][x] = null;
+                        }
+                    }
+                }
+                this.render();
+            }
+            
+            getNeighborhoodCounts(x, y, radius) {
+                const counts = { total: 0, empty: 0 };
+                
+                for (let dy = -radius; dy <= radius; dy++) {
+                    for (let dx = -radius; dx <= radius; dx++) {
+                        const nx = (x + dx + this.gridSize) % this.gridSize;
+                        const ny = (y + dy + this.gridSize) % this.gridSize;
+                        const cell = this.grid[ny][nx];
+                        
+                        if (cell === null) {
+                            counts.empty++;
+                        } else {
+                            counts.total++;
+                            counts[cell] = (counts[cell] || 0) + 1;
+                        }
+                    }
+                }
+                
+                return counts;
+            }
+            
+            saveHistory() {
+                const gridCopy = this.grid.map(row => [...row]);
+                this.history.push(gridCopy);
+                if (this.history.length > this.maxHistory) {
+                    this.history.shift();
+                }
+            }
+            
+            stepBack() {
+                if (this.history.length > 0) {
+                    this.grid = this.history.pop();
+                    this.render();
+                }
+            }
+            
+            step() {
+                if (!this.customRule) {
+                    return;
+                }
+                
+                this.saveHistory();
+                
+                const newGrid = Array(this.gridSize).fill(null).map(() => 
+                    Array(this.gridSize).fill(null)
+                );
+                
+                for (let y = 0; y < this.gridSize; y++) {
+                    for (let x = 0; x < this.gridSize; x++) {
+                        const color = this.grid[y][x];
+                        const counts = {
+                            3: this.getNeighborhoodCounts(x, y, 1),
+                            5: this.getNeighborhoodCounts(x, y, 2),
+                            7: this.getNeighborhoodCounts(x, y, 3),
+                            9: this.getNeighborhoodCounts(x, y, 4),
+                            11: this.getNeighborhoodCounts(x, y, 5)
+                        };
+                        
+                        try {
+                            newGrid[y][x] = this.customRule(x, y, color, counts);
+                        } catch (e) {
+                            console.error('Rule execution error:', e);
+                            newGrid[y][x] = color;
+                        }
+                    }
+                }
+                
+                this.grid = newGrid;
+                this.render();
+            }
+            
+            togglePlay() {
+                if (this.running) {
+                    this.stop();
+                } else {
+                    this.play();
+                }
+            }
+            
+            play() {
+                this.running = true;
+                document.getElementById('playBtn').textContent = 'Pause';
+                document.getElementById('playBtn').classList.add('active');
+                this.intervalId = setInterval(() => this.step(), this.speed);
+            }
+            
+            stop() {
+                this.running = false;
+                document.getElementById('playBtn').textContent = 'Play';
+                document.getElementById('playBtn').classList.remove('active');
+                if (this.intervalId) {
+                    clearInterval(this.intervalId);
+                    this.intervalId = null;
+                }
+            }
+            
+            applyCustomRules(silent = false) {
+                const code = document.getElementById('rulesEditor').value;
+                try {
+                    // Extract function from code
+                    const match = code.match(/function\s+updateCell\s*\([^)]*\)\s*\{[\s\S]*\}/);
+                    if (match) {
+                        this.customRule = eval(`(${match[0]})`);
+                        if (!silent) {
+                            alert('Rules applied successfully');
+                        }
+                    } else {
+                        throw new Error('Could not find updateCell function');
+                    }
+                } catch (e) {
+                    if (!silent) {
+                        alert('Error in rules: ' + e.message);
+                    }
+                    console.error(e);
+                }
+            }
+            
+            render() {
+                this.ctx.fillStyle = '#0a0e17';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                for (let y = 0; y < this.gridSize; y++) {
+                    for (let x = 0; x < this.gridSize; x++) {
+                        const cell = this.grid[y][x];
+                        if (cell !== null) {
+                            this.ctx.fillStyle = this.colors[cell] || cell;
+                            this.ctx.fillRect(
+                                x * this.cellSize,
+                                y * this.cellSize,
+                                this.cellSize,
+                                this.cellSize
+                            );
+                        }
+                    }
+                }
+                
+                // Draw grid lines
+                this.ctx.strokeStyle = 'rgba(45, 55, 72, 0.3)';
+                this.ctx.lineWidth = 1;
+                
+                if (this.cellSize > 3) {
+                    for (let i = 0; i <= this.gridSize; i++) {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(i * this.cellSize, 0);
+                        this.ctx.lineTo(i * this.cellSize, this.canvas.height);
+                        this.ctx.stroke();
+                        
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(0, i * this.cellSize);
+                        this.ctx.lineTo(this.canvas.width, i * this.cellSize);
+                        this.ctx.stroke();
+                    }
+                }
+                
+                this.updateStats();
+            }
+            
+            updateStats() {
+                const colorCounts = {};
+                let totalCells = 0;
+                let emptyCells = 0;
+                
+                for (let y = 0; y < this.gridSize; y++) {
+                    for (let x = 0; x < this.gridSize; x++) {
+                        const cell = this.grid[y][x];
+                        if (cell === null) {
+                            emptyCells++;
+                        } else {
+                            totalCells++;
+                            colorCounts[cell] = (colorCounts[cell] || 0) + 1;
+                        }
+                    }
+                }
+                
+                // Calculate entropy
+                const totalGridCells = this.gridSize * this.gridSize;
+                let entropy = 0;
+                Object.values(colorCounts).forEach(count => {
+                    const p = count / totalGridCells;
+                    entropy -= p * Math.log2(p);
+                });
+                if (emptyCells > 0) {
+                    const p = emptyCells / totalGridCells;
+                    entropy -= p * Math.log2(p);
+                }
+                
+                // Calculate density
+                const density = (totalCells / totalGridCells * 100).toFixed(1);
+                
+                // Calculate diversity (number of unique colors)
+                const diversity = Object.keys(colorCounts).length;
+                
+                // Calculate evenness (how evenly distributed colors are)
+                const maxEntropy = diversity > 0 ? Math.log2(diversity + 1) : 0;
+                const evenness = maxEntropy > 0 ? (entropy / maxEntropy * 100).toFixed(1) : 0;
+                
+                // Calculate clustering coefficient
+                let clusterScore = 0;
+                let cellsChecked = 0;
+                for (let y = 0; y < this.gridSize; y++) {
+                    for (let x = 0; x < this.gridSize; x++) {
+                        const cell = this.grid[y][x];
+                        if (cell !== null) {
+                            let sameNeighbors = 0;
+                            let totalNeighbors = 0;
+                            for (let dy = -1; dy <= 1; dy++) {
+                                for (let dx = -1; dx <= 1; dx++) {
+                                    if (dx === 0 && dy === 0) continue;
+                                    const nx = (x + dx + this.gridSize) % this.gridSize;
+                                    const ny = (y + dy + this.gridSize) % this.gridSize;
+                                    const neighbor = this.grid[ny][nx];
+                                    if (neighbor !== null) {
+                                        totalNeighbors++;
+                                        if (neighbor === cell) sameNeighbors++;
+                                    }
+                                }
+                            }
+                            if (totalNeighbors > 0) {
+                                clusterScore += sameNeighbors / totalNeighbors;
+                                cellsChecked++;
+                            }
+                        }
+                    }
+                }
+                const clustering = cellsChecked > 0 ? (clusterScore / cellsChecked * 100).toFixed(1) : 0;
+                
+                const statsContainer = document.getElementById('stats');
+                statsContainer.innerHTML = `
+                    <div class="stat-item">
+                        <div class="stat-label">Occupied Cells</div>
+                        <div class="stat-value">${totalCells}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Empty Cells</div>
+                        <div class="stat-value">${emptyCells}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Density</div>
+                        <div class="stat-value">${density}%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Diversity</div>
+                        <div class="stat-value">${diversity} colors</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Entropy</div>
+                        <div class="stat-value">${entropy.toFixed(3)} bits</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Evenness</div>
+                        <div class="stat-value">${evenness}%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Clustering</div>
+                        <div class="stat-value">${clustering}%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">History Depth</div>
+                        <div class="stat-value">${this.history.length}</div>
+                    </div>
+                `;
+                
+                Object.entries(colorCounts).forEach(([color, count]) => {
+                    const percentage = (count / totalGridCells * 100).toFixed(1);
+                    const item = document.createElement('div');
+                    item.className = 'stat-item';
+                    item.style.gridColumn = 'span 2';
+                    const hexColor = this.colors[color] || color;
+                    item.innerHTML = `
+                        <div class="stat-label" style="color: ${hexColor}">■ ${color}</div>
+                        <div class="stat-value">${count} (${percentage}%)</div>
+                    `;
+                    statsContainer.appendChild(item);
+                });
+            }
+        }
+        
+        // Initialize the application
+        const ca = new CellularAutomata();
+        
+        // Auto-apply default rules on load
+        ca.applyCustomRules(true);
+    </script>
+</body>
+</html>
